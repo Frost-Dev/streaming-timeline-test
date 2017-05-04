@@ -1,0 +1,48 @@
+html
+	head
+		meta(charset='UTF-8')
+		title タイムライン
+
+	body
+		p 自身のuserId: user_a_id
+			br
+			| 自分をフォローすることで表示されます。
+		form#follow-form
+			input#user-id-box(type='text' style='width:100px;' placeholder='userId')
+			button(type='button' onclick='follow();') フォロー
+
+		form#create-status-form
+			input#status-box(type='text' style='width:200px;')
+			button(type='button' onclick='publishMessage();') 投稿
+
+		#timeline
+		script(src='/socket.io/socket.io.js')
+		script(type='text/javascript').
+			var timeline = document.getElementById('timeline');
+			var statusBox = document.getElementById('status-box');
+			var userIdBox = document.getElementById('user-id-box');
+
+			var socket = io();
+			socket.on('status', function (data) {
+				addMessage(data.text);
+			});
+
+			socket.on('error', function (data) {
+				alert(data.message);
+			});
+
+			function follow() {
+				socket.emit('create-follow-test', {value: userIdBox.value});
+				userIdBox.value = '';
+			}
+
+			function publishMessage() {
+				socket.emit('create-status-test', {value: statusBox.value});
+				statusBox.value = '';
+			}
+
+			function addMessage (msg) {
+				var domMeg = document.createElement('div');
+				domMeg.innerHTML = msg;
+				timeline.insertBefore(domMeg, timeline.firstChild);
+			}
