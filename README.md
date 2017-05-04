@@ -11,3 +11,6 @@
 2. `cd streaming-timeline-test`
 3. `npm install`
 4. `npm run start`
+
+## 構成イメージ
+![image](image.png)
