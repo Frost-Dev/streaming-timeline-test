@@ -9,4 +9,5 @@
 ## 起動
 1. `git clone git@github.com:marihachi/streaming-timeline-test.git`
 2. `cd streaming-timeline-test`
-3. `npm run start`
+3. `npm install`
+4. `npm run start`
