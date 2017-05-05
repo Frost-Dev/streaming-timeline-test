@@ -28,12 +28,14 @@ app.use(session({
 
 app.get('/login/a', (req, res) => {
 	console.log('[web/session]set accessKey.');
+	req.session.userId = 'user_a_id';
 	req.session.AccessKey = 'user_a_access_key';
 	res.send('login.');
 });
 
 app.get('/login/b', (req, res) => {
 	console.log('[web/session]set accessKey.');
+	req.session.userId = 'user_b_id';
 	req.session.AccessKey = 'user_b_access_key';
 	res.send('login.');
 });
@@ -45,7 +47,7 @@ app.get('/logout', (req, res) => {
 });
 
 app.get('/', (req, res) => {
-	res.render('timeline', {});
+	res.render('timeline', {userId: req.session.userId != null ? req.session.userId : '(unauthorized)'});
 });
 
 http.listen(3000, () => {

@@ -4,9 +4,10 @@ html
 		title タイムライン
 
 	body
-		p 自身のuserId: user_a_id
+		p
+			| 自身のuserId: #{userId}
 			br
-			| 自分をフォローすることで表示されます。
+			| 自分もしくは他ユーザーをフォローすることでタイムラインに表示されます。
 		form#follow-form
 			input#user-id-box(type='text' style='width:100px;' placeholder='userId')
 			button(type='button' onclick='follow();') フォロー
