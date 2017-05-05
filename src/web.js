@@ -6,15 +6,15 @@ const session = require('express-session');
 const RedisStore = require('connect-redis')(session);
 const app = require('express')();
 const http = require('http').Server(app);
+
 const ioServer = require('socket.io');
 const ioClient = require('socket.io-client');
 const ioServerFront = ioServer(http);
-const clientSocketApi = ioClient('http://localhost:3001');
+const ioClientApiSocket = ioClient('http://localhost:3001');
 
 const store = new RedisStore({db: 1});
 const sessionCookieName = 'sid'
 const sessionSecret = 'hogepiyo';
-
 
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'pug');
@@ -47,49 +47,62 @@ http.listen(3000, () => {
 	console.log(`listen on port: 3000`);
 });
 
-clientSocketApi.on('connect', () => {
-	console.log('[web/clientSocketApi]connected.');
-	ioServerFront.sockets.on('connection', serverSocketFront => {
-		console.log(`connect: id=${serverSocketFront.id}`);
-		let cookies = cookieParser.signedCookies(cookie.parse(serverSocketFront.request.headers.cookie), sessionSecret);
+ioClientApiSocket.on('connect', () => {
+	console.log('[web/ioClientApiSocket]connected.');
+	ioServerFront.sockets.on('connection', ioServerFrontSocket => {
+		console.log(`connect: id=${ioServerFrontSocket.id}`);
+		let cookies = cookieParser.signedCookies(cookie.parse(ioServerFrontSocket.request.headers.cookie), sessionSecret);
 
 		store.get(cookies[sessionCookieName], (err, session) => {
-			console.log(`[web/serverSocketFront]fetched session: ${inspect(session)}`);
+			console.log(`[web/ioServerFrontSocket]fetched session: ${inspect(session)}`);
 
-			serverSocketFront.on('create-follow-test', data => {
-				clientSocketApi.emit('create-follow-test', {
+			// フロント側からフォロー関係の作成の指示を受信したとき
+			ioServerFrontSocket.on('create-follow-test', data => {
+				console.log('[web/ioServerFrontSocket]send to api follow relationship');
+
+				// API側にフォロー関係の作成を指示
+				ioClientApiSocket.emit('create-follow-test', {
 					target: data.value,
 					applicationKey: 'hoge1234',
 					accessKey: session.AccessKey
 				});
 			});
 
-			serverSocketFront.on('create-status-test', data => {
+			// フロント側からステータスの作成の指示を受信したとき
+			ioServerFrontSocket.on('create-status-test', data => {
 				if (!session.AccessKey) {
-					console.log('[web/serverSocketFront]error: unauthorized');
-					ioServerFront.to(serverSocketFront.id).emit('error', {message: 'unauthorized'});
+					console.log('[web/ioServerFrontSocket]error: unauthorized');
+
+					// フロント側にエラーを返す
+					ioServerFront.to(ioServerFrontSocket.id).emit('error', {message: 'unauthorized'});
 					return;
 				}
 
-				console.log('[web/serverSocketFront]send status data to api');
-				clientSocketApi.emit('create-status-test', {
+				console.log('[web/ioServerFrontSocket]send status data to api');
+
+				// API側にステータス作成を指示
+				ioClientApiSocket.emit('create-status-test', {
 					text: data.value,
 					applicationKey: 'hoge1234',
 					accessKey: session.AccessKey
 				});
 			});
 
-			clientSocketApi.on('status', data => {
-				ioServerFront.to(serverSocketFront.id).emit('status', data);
+			// API側からステータス情報を受信
+			ioClientApiSocket.on('status', data => {
+				// フロント側にステータス情報を返す
+				ioServerFront.to(ioServerFrontSocket.id).emit('status', data);
 			});
 
-			clientSocketApi.on('error', data => {
-				ioServerFront.to(serverSocketFront.id).emit('error', data);
+			// API側からエラーを受信
+			ioClientApiSocket.on('error', data => {
+				// フロント側にエラーを返す
+				ioServerFront.to(ioServerFrontSocket.id).emit('error', data);
 			});
 		});
 
-		serverSocketFront.on('disconnect', () => {
-			console.log(`[web]disconnect: id=${serverSocketFront.id}`);
+		ioServerFrontSocket.on('disconnect', () => {
+			console.log(`[web]disconnect: id=${ioServerFrontSocket.id}`);
 		});
 	});
 });
