@@ -6,7 +6,6 @@ const ioServer = require('socket.io');
 const ioServerWeb = ioServer(http);
 
 const publisher = require('redis').createClient(6379, 'localhost');
-const subscriber = require('redis').createClient(6379, 'localhost');
 
 http.listen(3001, () => {
 	console.log(`listen on port: 3001`);
@@ -21,17 +20,19 @@ const findUser = (accessKey) => {
 	return userDb.find(i => i.accessKey === accessKey);
 };
 
-ioServerWeb.sockets.on('connection', serverSocketWeb => {
-	console.log(`[api/serverSocketWeb]connected. id=${serverSocketWeb.id}`);
+ioServerWeb.sockets.on('connection', ioServerWebSocket => {
+	console.log(`[api/ioServerWebSocket]connected. id=${ioServerWebSocket.id}`);
+
+	const subscriber = require('redis').createClient(6379, 'localhost');
 
 	// Web側からフォロー関係の作成の指示を受信したとき
-	serverSocketWeb.on('create-follow-test', data => {
-		console.log(`[api/serverSocketWeb]on create-follow-test`);
+	ioServerWebSocket.on('create-follow-test', data => {
+		console.log(`[api/ioServerWebSocket]on create-follow-test`);
 
 		if (data.applicationKey == null || data.accessKey == null) {
 			// Web側にエラーを返す
 			console.log(`[api/ioServerWeb]send error.`);
-			ioServerWeb.to(serverSocketWeb.id).emit('error', {message: 'applicationKey/AccessKey are empty'});
+			ioServerWeb.to(ioServerWebSocket.id).emit('error', {message: 'applicationKey/AccessKey are empty'});
 
 			return;
 		}
@@ -42,13 +43,13 @@ ioServerWeb.sockets.on('connection', serverSocketWeb => {
 	});
 
 	// Web側からステータス作成の指示を受信したとき
-	serverSocketWeb.on('create-status-test', data => {
-		console.log(`[api/serverSocketWeb]on create-status-test`);
+	ioServerWebSocket.on('create-status-test', data => {
+		console.log(`[api/ioServerWebSocket]on create-status-test`);
 
 		if (data.applicationKey == null || data.accessKey == null) {
 			// Web側にエラーを返す
 			console.log(`[api/ioServerWeb]send error.`);
-			ioServerWeb.to(serverSocketWeb.id).emit('error', {message: 'applicationKey/AccessKey are empty'});
+			ioServerWeb.to(ioServerWebSocket.id).emit('error', {message: 'applicationKey/AccessKey are empty'});
 
 			return;
 		}
@@ -56,7 +57,7 @@ ioServerWeb.sockets.on('connection', serverSocketWeb => {
 		const userId = findUser(data.accessKey).userId;
 
 		// Redisで出版
-		console.log(`[api/publisher]publish status.`);
+		console.log(`[api/publisher]publish status. user=${userId}`);
 		publisher.publish(userId, JSON.stringify(data));
 	});
 
@@ -65,11 +66,11 @@ ioServerWeb.sockets.on('connection', serverSocketWeb => {
 		console.log('[api/subscriber]on message: userId=' + userId + ', data=' + data);
 
 		// Web側にステータス情報を返す
-		console.log(`[api/ioServerWeb]send status.`);
-		ioServerWeb.to(serverSocketWeb.id).emit('status', JSON.parse(data));
+		console.log(`[api/ioServerWeb]send status to user ${ioServerWebSocket.id}.`);
+		ioServerWeb.to(ioServerWebSocket.id).emit('status', JSON.parse(data));
 	});
 
-	serverSocketWeb.on('disconnect', () => {
-		console.log(`[api/serverSocketWeb]on disconnect: id=${serverSocketWeb.id}`);
+	ioServerWebSocket.on('disconnect', () => {
+		console.log(`[api/ioServerWebSocket]on disconnect: id=${ioServerWebSocket.id}`);
 	});
 });

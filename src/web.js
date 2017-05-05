@@ -9,7 +9,6 @@ const getSessionFromCookieAsync = require('./helpers/get-session-from-cookie-asy
 const ioServer = require('socket.io');
 const ioClient = require('socket.io-client');
 const ioServerFront = ioServer(http);
-const ioClientApiSocket = ioClient('http://localhost:3001');
 
 const store = new RedisStore({db: 1});
 const sessionCookieName = 'sid'
@@ -53,10 +52,12 @@ http.listen(3000, () => {
 	console.log(`listen on port: 3000`);
 });
 
-ioClientApiSocket.on('connect', () => {
-	console.log(`[web/ioClientApiSocket]connected. id=${ioClientApiSocket.id}`);
+ioServerFront.sockets.on('connection', ioServerFrontSocket => {
+	const ioClientApiSocket = ioClient('http://localhost:3001');
 
-	ioServerFront.sockets.on('connection', ioServerFrontSocket => {
+	ioClientApiSocket.on('connect', () => {
+		console.log(`[web/ioClientApiSocket]connected. id=${ioClientApiSocket.id}`);
+
 		(async () => {
 			console.log(`[web/ioServerFrontSocket]connected. id=${ioServerFrontSocket.id}`);
 
@@ -98,7 +99,7 @@ ioClientApiSocket.on('connect', () => {
 
 			// API側からステータス情報を受信したとき
 			ioClientApiSocket.on('status', data => {
-				console.log('[web/ioClientApiSocket]on status');
+				console.log('[web/ioClientApiSocket]on status: accessKey=' + session.AccessKey);
 
 				// フロント側にステータス情報を返す
 				ioServerFront.to(ioServerFrontSocket.id).emit('status', data);
