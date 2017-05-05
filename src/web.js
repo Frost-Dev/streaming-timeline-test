@@ -88,13 +88,13 @@ ioClientApiSocket.on('connect', () => {
 				});
 			});
 
-			// API側からステータス情報を受信
+			// API側からステータス情報を受信したとき
 			ioClientApiSocket.on('status', data => {
 				// フロント側にステータス情報を返す
 				ioServerFront.to(ioServerFrontSocket.id).emit('status', data);
 			});
 
-			// API側からエラーを受信
+			// API側からエラーを受信したとき
 			ioClientApiSocket.on('error', data => {
 				// フロント側にエラーを返す
 				ioServerFront.to(ioServerFrontSocket.id).emit('error', data);
